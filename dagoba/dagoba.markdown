@@ -11,15 +11,15 @@ _[Dann](https://twitter.com/dann) enjoys building things, like programming langu
 > "What went forth to the ends of the world to traverse not itself, God, the sun, Shakespeare, a commercial traveller, having itself traversed in reality itself becomes that self."
 > &mdash;James Joyce
 
-A long time ago, when the world was still young, all data walked happily in single file. If you wanted your data to jump over a fence, you just set the fence down in its path and each datum jumped it in turn. Punch cards in, punch cards out. Life was easy and programming was a breeze.
+\noindent A long time ago, when the world was still young, all data walked happily in single file. If you wanted your data to jump over a fence, you just set the fence down in its path and each datum jumped it in turn. Punch cards in, punch cards out. Life was easy and programming was a breeze.
 
-Then came the random access revolution, and data grazed freely across the hillside. Herding data became a serious concern: if you can access any piece of data at any time, how do you know which one to pick next? Techniques were developed for corralling the data by forming links between items [^items], marshaling groups of units into formation through their linking assemblage. Questioning data meant picking a sheep and pulling along everything connected to it.
+Then came the random access revolution, and data grazed freely across the hillside. Herding data became a serious concern: if you can access any piece of data at any time, how do you know which one to pick next? Techniques were developed for corralling the data by forming links between items[^items], marshaling groups of units into formation through their linking assemblage. Questioning data meant picking a sheep and pulling along everything connected to it.
 
 Later programmers departed from this tradition, imposing a set of rules on how data would be aggregated[^relationaltheory]. Rather than tying disparate data directly together they would cluster by content, decomposing data into bite-sized pieces, collected in pens and collared with name tags. Questions were posed declaratively, resulting in accumulating pieces of partially decomposed data (a state the relationalists refer to as "normal") into a frankencollection returned to the programmer.
 
 For much of recorded history this relational model reigned supreme. Its dominance went unchallenged through two major language wars and countless skirmishes. It offered everything you could ask for in a model, for the small price of inefficiency, clumsiness and lack of scalability. For eons that was a price programmers were willing to pay. Then the internet happened.
 
-The distributed revolution changed everything, again. Data broke free of spacial constraints and roamed from machine to machine. CAP-wielding theorists busted the relational monopoly, opening the door to a plethora of new herding techniques&mdash;some of which hark back to the earliest attempts to domesticate random-access data. We're going to look at one of these, a style known as the graph database.
+The distributed revolution changed everything, again. Data broke free of spacial constraints and roamed from machine to machine. CAP-wielding theorists busted the relational monopoly, opening the door to new herding techniques&mdash;some of which hark back to the earliest attempts to domesticate random-access data. We're going to look at one of these, a style known as the graph database.
 
 [^items]: One of the very first database designs was the hierarchical model, which grouped items into tree-shaped hierarchies and is still used as the basis of IBM's IMS product, a high-speed transaction processing system. It's influence can also been seen in XML, file systems and geographic information storage. The network model, invented by Charles Bachmann and standardized by CODASYL, generalized the hierarchical model by allowing multiple parents, forming a DAG instead of a tree. These navigational database models came in to vogue in the 1960s and continued their dominance until performance gains made relational databases usable in the 1980s.
 
@@ -28,7 +28,7 @@ The distributed revolution changed everything, again. Data broke free of spacial
 
 ## Take One
 
-Within this chapter we're going to build a graph database[^dagoba]. As we build it we're going to explore the problem space, generate multiple solutions for our design decisions, compare those solutions to understand the tradeoffs between them, and finally choose the right solution for our system. A higher-than-usual precedence is put on code compactness, but the process will otherwise mirror that used by software professionals since time immemorial. The purpose of this chapter is to teach this process. And to build a graph database.[^purpose]
+Within this chapter we're going to build a graph database[^dagoba]. As we build it we're going to explore the problem space, generate multiple solutions for our design decisions, compare those solutions to understand the tradeoffs between them, and finally choose the right solution for our system. A higher-than-usual precedence is put on code compactness, but the process will otherwise mirror that used by software professionals since time immemorial. The purpose of this chapter is to teach this process. And to build a graph database[^purpose].
 
 [^dagoba]: This database started life as a library for managing Directed Acyclic Graphs, or DAGs. Its name "Dagoba" was originally intended to come with a silent 'h' at the end, an homage to the swampy fictional planet, but reading the back of a chocolate bar one day we discovered the sans-h version refers to a place for silently contemplating the connections between things, which seems even more fitting.
 
@@ -93,19 +93,19 @@ children = function(x) { return E.reduce(
   function(acc, e) { return ~x.indexOf(e[0]) ? acc.concat(e[1]) : acc }, [] )}
 ```
 
-Now we can say something like: 
+Now we can say something like:
 
 ```javascript
     children(children(children(parents(parents(parents([8]))))))
-``` 
+```
 
 It reads backwards and gets us lost in silly parens, but is otherwise pretty close to what we wanted. Take a minute to look at the code. Can you see any ways to improve it?
 
 We're treating the edges as a global variable, which means we can only ever have one database at a time using these helper functions. That's pretty limiting.
 
-We're also not using the vertices at all. What does that tell us? It implies that everything we need is in the edges array, which in this case is true: the vertex values are scalars, so they exist independently in the edges array. If we want to answer questions like "What is Freyja's connection to the Valkyries?" we'll need to add more information to the vertices, which means making them compound values, which means the edges array should reference vertices instead of copying their value.
+We're also not using the vertices at all. What does that tell us? It implies that everything we need is in the edges array, which in this case is true: the vertex values are scalars, so they exist independently in the edges array. If we want to answer questions like "What is Freyja's connection to the Valkyries?" we'll need to add more data to the vertices, which means making them compound values, which means the edges array should reference vertices instead of copying their value.
 
-The same holds true for our edges: they contain an "in" vertex and an "out" vertex [^vertexnote], but no elegant way to incorporate additional information. We'll need that to answer questions like "How many stepparents did Loki have?" or "How many children did Odin have before Thor was born?"
+The same holds true for our edges: they contain an "in" vertex and an "out" vertex[^vertexnote], but no elegant way to incorporate additional information. We'll need that to answer questions like "How many stepparents did Loki have?" or "How many children did Odin have before Thor was born?"
 
 You don't have to squint very hard to tell that the code for our two selectors looks very similar, which suggests there may be a deeper abstraction from which they spring.
 
@@ -145,7 +145,7 @@ Dagoba.graph = function(V, E) {                 // the factory
 }
 ```
 
-We'll accept two optional arguments: a list of vertices and a list of edges. JavaScript is rather lax about parameters, so all named parameters are optional and default to `undefined` if not supplied [^optionalparams]. We will often have the vertices and edges before building the graph and use the V and E parameters, but it's also common to not have those at creation time and to build the graph up programmatically [^graphbuilding].
+We'll accept two optional arguments: a list of vertices and a list of edges. JavaScript is rather lax about parameters, so all named parameters are optional and default to `undefined` if not supplied[^optionalparams]. We will often have the vertices and edges before building the graph and use the V and E parameters, but it's also common to not have those at creation time and to build the graph up programmatically[^graphbuilding].
 
 [^optionalparams]: It's also lax in the other direction: all functions are variadic, and all arguments are available by position via the `arguments` object, which is almost like an array but not quite. ("Variadic" is a fancy way of saying a function has indefinite arity. "A function has indefinite arity" is a fancy way of saying it takes a variable number of variables.)
 
@@ -176,7 +176,7 @@ Dagoba.G.addVertex = function(vertex) {         // accepts a vertex-like object
 }
 ```
 
-If the vertex doesn't already have an `_id` property we assign it one using our autoid. [^autoid] If the `_id` already exists on a vertex in our graph then we reject the new vertex. Wait, when would that happen? And what exactly is a vertex?
+If the vertex doesn't already have an `_id` property we assign it one using our autoid.[^autoid] If the `_id` already exists on a vertex in our graph then we reject the new vertex. Wait, when would that happen? And what exactly is a vertex?
 
 [^autoid]: Why can't we just use `this.vertices.length` here?
 
@@ -293,7 +293,7 @@ Note that `[].slice.call(arguments)` is JS parlance for "please pass me an array
 
 ## The Problem with Being Eager
 
-Before we look at the pipetypes themselves we're going to take a diversion into the exciting world of execution strategy. There are two main schools of thought: the Call By Value clan, also known as eager beavers, are strict in their insistence that all arguments be evaluated before the function is applied. Their opposing faction, the Call By Needians, are content to procrastinate until the last possible moment before doing anything, and even then do as little as possible&mdash;they are, in a word, lazy.
+Before we look at the pipetypes themselves we're going to take a diversion into the exciting world of execution strategy. There are two main schools of thought: the Call By Value clan, also known as eager beavers, are strict in their insistence that all arguments be evaluated before the function is applied. Their opposing faction, the Call By Needians, are content to procrastinate until the last possible moment before doing anything&mdash;they are, in a word, lazy.
 
 JavaScript, being a strict language, will process each of our steps as they are called. We would then expect the evaluation of `g.v('Thor').out().in()` to first find the Thor vertex, then find all vertices connected to it by outgoing edges, and from each of those vertices finally return all vertices they are connected to by inbound edges.
 
@@ -301,7 +301,7 @@ In a non-strict language we would get the same result&mdash;the execution strate
 
 We're probably only interested in getting a few unique results out, so we'll change the query a bit: `g.v('Thor').out().out().out().in().in().in().unique().take(10)`. Now our query produces at most 10 results. What happens if we evaluate this eagerly, though? We're still going to have to build up septillions of results before returning only the first 10.
 
-All graph databases have to support a mechanism for doing as little work as possible, and most choose some form of non-strict evaluation to do so. Since we're building our own interpreter, the lazy evaluation of our program is certainly achievable, but we may have to contend with some unintended consequences.
+All graph databases have to support a mechanism for doing as little work as possible, and most choose some form of non-strict evaluation to do so. Since we're building our own interpreter, the lazy evaluation of our program is possible, but we may have to contend with some consequences.
 
 
 ## Ramifications of Evaluation Strategy on our Mental Model
@@ -335,7 +335,7 @@ We'll go into more detail on this new model soon, but in the meantime here are s
 
 ## Pipetypes
 
-Pipetypes make up the core functionality of our system. Once we understand how each one works, we'll have a better basis for understanding how they're invoked and sequenced together in the interpreter.
+Pipetypes make up the core of our system. Once we understand how each one works, we'll have a better basis for understanding how they're invoked and sequenced together in the interpreter.
 
 We'll start by making a place to put our pipetypes, and a way to add new ones.
 
@@ -414,12 +414,14 @@ There are a couple of common ways of determining this: in a statically typed sys
 
 [^referencecounter]: Most modern JS runtimes employ generational garbage collectors, and the language is intentionally kept at arm's length from the engine's memory management to curtail a source of programmatic non-determinism.
 
-JavaScript doesn't have either of these facilities, but we can get almost the same effect if we're really, really disciplined. Which we will be. For now.
+JavaScript doesn't have either of these facilities, but we can get almost the same effect if we're really, really disciplined. Which we will be. For now. 
 
 
 #### In-N-Out
 
 Walking the graph is as easy as ordering a burger. These two lines set up the `in` and `out` pipetypes for us.
+
+\newpage 
 
 ```javascript
 Dagoba.addPipetype('out', Dagoba.simpleTraversal('out'))
@@ -467,11 +469,14 @@ In this case, with a dozen or so pipetypes, the right choice seems to be to styl
 
 #### Property
 
-Let's pause for a moment to consider an example query based on the three pipetypes we've seen. We can ask for Thor's grandparents like this: `g.v('Thor').out('parent').out('parent').run()` [^runnote]. But what if we wanted their names?
+Let's pause for a moment to consider an example query based on the three pipetypes we've seen. We can ask for Thor's grandparents like this[^runnote]: 
 
 [^runnote]: The `run()` at the end of the query invokes the interpreter and returns results.
 
-We could put a map on the end of that:
+```javascript
+g.v('Thor').out('parent').out('parent').run()
+``` 
+But what if we wanted their names? We could put a map on the end of that:
 
 ```javascript
 g.v('Thor').out('parent').out('parent').run()
@@ -508,7 +513,7 @@ produces output in one-to-one correspondence with the grandchildren:
 
 ```javascript
     g.v('Thor').in().in().out().out().unique().run()
-``` 
+```
 
 The pipetype implementation:
 
@@ -565,7 +570,7 @@ Dagoba.addPipetype('filter', function(graph, args, gremlin, state) {
 
 If the filter's first argument is not an object or function then we trigger an error, and pass the gremlin along. Pause for a minute, and consider the alternatives. Why would we decide to continue the query once an error is encountered?
 
-There are two reasons this error might arise. The first involves a programmer typing in a query, either in a REPL or directly in code. When run, that query will produce results, and also generate a programmer-observable error. The programmer then corrects the error to further filter the set of results produced. Alternatively, the system could display only the error and produce no results, and fixing all errors would allow results to be displayed. Which of those you prefer is mostly personal preference.
+There are two reasons this error might arise. The first involves a programmer typing in a query, either in a REPL or directly in code. When run, that query will produce results, and also generate a programmer-observable error. The programmer then corrects the error to further filter the set of results produced. Alternatively, the system could display only the error and produce no results, and fixing all errors would allow results to be displayed.
 
 The second possibility is that the filter is being applied dynamically at run time. This is a much more important case, because the person invoking the query is not necessarily the author of the query code. Because this is on the web, our default rule is to always show results, and to never break things. It is usually preferable to soldier on in the face of trouble rather than succumb to our wounds and present the user with a grisly error message.
 
@@ -769,7 +774,12 @@ Dagoba.G.findVertices = function(args) {                      // vertex finder h
 }
 ```
 
-This function receives its arguments as a list. If the first one is an object it passes it to `searchVertices`, allowing queries like \newline `g.v({_id:'Thor'}).run()` or `g.v({species: 'Aesir'}).run()`.
+This function receives its arguments as a list. If the first one is an object it passes it to `searchVertices`, allowing queries like:
+
+```javascript
+  g.v({_id:'Thor'}).run()
+  g.v({species: 'Aesir'}).run()
+```
 
 Otherwise, if there are arguments it gets passed to `findVerticesByIds`, which handles queries like `g.v('Thor', 'Odin').run()`.
 
@@ -824,7 +834,7 @@ Dagoba.filterEdges = function(filter) {
 }
 ```
 
-The first case is no filter at all: `g.v('Odin').in().run()` traverses all edges pointing in to Odin.
+The first case is no filter at all: `g.v('Odin').in().run()` traverses all edges to Odin.
 
 The second case filters on the edge's label: `g.v('Odin').in('parent').run()` traverses those edges with a label of 'parent'.
 
@@ -917,17 +927,9 @@ None of the thunks are invoked until one is actually needed, which usually impli
 
 There are a couple of tradeoffs with this approach: one is that spatial performance becomes more difficult to reason about, because of the potentially vast thunk graphs that can be created. Another is that our program is now expressed as a single thunk, and we can't do much with it at that point.
 
-This second point isn't usually an issue, because of the phase separation between when our compiler runs its optimizations and when all the thunking occurs during runtime. In our case we don't have that advantage: because we're using method chaining to implement a fluent interface [^fluentinterface] if we also use thunks to achieve laziness we would thunk each new method as it is called, which means by the time we get to `run()` we have only a single thunk as our input, and no way to optimize our query.
+This second point isn't usually an issue, because of the phase separation between when our compiler runs its optimizations and when all the thunking occurs at runtime. In our case we don't have that advantage: because we're using method chaining to implement a fluent interface [^fluentinterface] if we also use thunks to achieve laziness we would thunk each new method as it is called, which means by the time we get to `run()` we have only a thunk as our input, and no way to optimize our query.
 
-[^fluentinterface]: Method chaining lets us write `g.v('Thor').in().out().run()` instead of: 
-
-```javascript
-    var query = g.query(); 
-    query.add('vertex', 'Thor'); 
-    query.add('in'); 
-    query.add('out'); 
-    query.run()`
-```
+[^fluentinterface]: Method chaining lets us write `g.v('Thor').in().out().run()` instead of the six lines of non-fluent JS required to accomplish the same thing.
 
 Interestingly, our fluent interface hides another difference between our query language and regular programming languages. The query `g.v('Thor').in().out().run()` could be rewritten as `run(out(in(v(g, 'Thor'))))` if we weren't using method chaining. In JS we would first process `g` and `'Thor'`, then `v`, then `in`, `out` and `run`, working from the inside out. In a language with non-strict semantics we would work from the outside in, processing each consecutive nested layer of arguments only as needed.
 
@@ -1097,9 +1099,9 @@ Dagoba.addAlias = function(newname, oldname, defaults) {
 
 We're adding a new name for an existing step, so we'll need to create a query transformer that converts the new name to the old name whenever it's encountered. We'll also need to add the new name as a method on the main query object, so it can be pulled into the query program.
 
-If we could capture missing method calls in JavaScript and route them to a handler function then we might be able to run this transformer with a lower priority, but there's currently no way to do that. Instead we will run it with a high priority of 100 so the aliased methods are added before they are invoked.
+If we could capture missing method calls and route them to a handler function then we might be able to run this transformer with a lower priority, but there's currently no way to do that. Instead we will run it with a high priority of 100 so the aliased methods are added before they are invoked.
 
-We call another helper function to merge the incoming step's arguments with the alias's default arguments. If the incoming step is missing an argument then we'll use the alias's argument for that slot.
+We call another helper to merge the incoming step's arguments with the alias's default arguments. If the incoming step is missing an argument then we'll use the alias's argument for that slot.
 
 ```javascript
 Dagoba.extend = function(list, defaults) {
@@ -1156,9 +1158,9 @@ we can just say `g.v('Forseti').cousins()`.
 
 We've introduced a bit of a pickle, though: while our `addAlias` function is resolving an alias it also has to resolve other aliases. What if `parents` called some other alias, and while we were resolving `cousins` we had to stop to resolve `parents` and then resolve its aliases and so on? What if one of `parents` aliases ultimately called `cousins`?
 
-This brings us in to the realm of dependency resolution [^dependencyresolution], a core component of modern package managers. There are a lot of fancy tricks for choosing ideal versions, tree shaking, general optimizations and the like, but the basic idea is fairly simple. We're going to make a graph of all the dependencies and their relationships, and then try to find a way to line up the vertices while making all the arrows go from left to right. If we can, then this particular sorting of the vertices is called a 'topological ordering', and we've proven that our dependency graph has no cycles: it is a Directed Acyclic Graph (DAG). If we fail to do so then our graph has at least one cycle.
+This brings us in to the realm of dependency resolution[^dependencyresolution], a core component of modern package managers. There are a lot of fancy tricks for choosing ideal versions, tree shaking, general optimizations and the like, but the basic idea is fairly simple. We're going to make a graph of all the dependencies and their relationships, and then try to find a way to line up the vertices while making all the arrows go from left to right. If we can, then this particular sorting of the vertices is called a 'topological ordering', and we've proven that our dependency graph has no cycles: it is a Directed Acyclic Graph (DAG). If we fail to do so then our graph has at least one cycle.
 
-[^dependencyresolution]: You can learn more about dependency resolution in \aosachapref{s:contingent}.
+[^dependencyresolution]: You can learn more about dependency resolution in the Contingent chapter of this book.
 
 On the other hand, we expect that our queries will generally be rather short (100 steps would be a very long query) and that we'll have a reasonably low number of transformers. Instead of fiddling around with DAGs and dependency management we could return 'true' from the transform function if anything changed, and then run it until it stops being productive. This requires each transformer to be idempotent, but that's a useful property for transformers to have. What are the pros and cons of these two pathways?
 
@@ -1248,7 +1250,7 @@ We could merge the two replacer functions into a single function, and use that n
 
 ## Persistence
 
-Persistence is usually one of the trickier parts of a database: disks are relatively safe, but dreadfully slow. Batching writes, making them atomic, journaling&mdash;these are difficult to make both fast and correct.
+Persistence is usually one of the trickier parts of a database: disks are relatively safe but slow. Batching writes, making them atomic, journaling&mdash;these are difficult to make both fast and correct.
 
 Fortunately, we're building an *in-memory* database, so we don't have to worry about any of that! We may, though, occasionally want to save a copy of the database locally for fast restart on page load. We can use the serializer we just built to do exactly that. First let's wrap it in a helper function:
 
@@ -1330,13 +1332,11 @@ g.v('Thor').out().as('a')
            .run()`
 ```
 
-after the query transformers have all run.
-
-We could run the `times` transformer first, to produce:
+after the query transformers have all run. We could run the `times` transformer first, to produce:
 
 ```javascript
     g.v('Thor').out().all().out().all().out().all().run()
-``` 
+```
 
 Then run the `all` transformer and have it transform each `all` into a uniquely labeled `as`, and put a `merge` after the last `as`.
 
@@ -1346,7 +1346,7 @@ To solve that first problem we're going to have to treat `all`s as something mor
 
 The next two problems are easier. To modify just part of a query we'll wrap that portion in special start/end steps, like `g.v('Thor').out().start().in().out().end().times(4).run()`. Actually, if the interpreter knows about these special pipetypes we don't need the end step, because the end of a sequence is always a special pipetype. We'll call these special pipetypes "adverbs", because they modify regular pipetypes like adverbs modify verbs.
 
-To handle multiple `all`s we need to run all `all` transformers twice: once before the `times` transformer, to mark all `all`s uniquely, and again after `times`' time to re-mark all marked `all`s uniquely.
+To handle multiple `all`s we need to run all `all` transformers twice: once before `times`, to mark all `all`s uniquely, and again after `times` to re-mark all marked `all`s uniquely.
 
 There's still the issue of searching through an unbounded number of ancestors&mdash;for example, how do we find out which of Ymir's descendants are scheduled to survive Ragnarök? We could make individual queries like `g.v('Ymir').in().filter({survives: true})` and <latex>\newline</latex> `g.v('Ymir').in().in().in().in().filter({survives: true})`, and manually collect the results ourselves, but that's pretty awful.
 
